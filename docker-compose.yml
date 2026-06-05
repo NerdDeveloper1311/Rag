@@ -1,0 +1,86 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    shm_size: '16gb'
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    volumes:
+      - /d/DockerVolume/ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - spring-ai-net
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    environment:
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'WEBUI_SECRET_KEY=1q2w3e4r'
+    volumes:
+      - /d/DockerVolume/open-webui:/app/backend/data
+    depends_on:
+      - ollama
+    networks:
+      - spring-ai-net
+  
+  pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: pgvector
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=vector_db
+      - POSTGRES_USER=vincent
+      - POSTGRES_PASSWORD=1q2w3e4r
+    volumes:
+      - /d/DockerVolume/pgvector:/var/lib/postgresql/data
+    networks:
+      - spring-ai-net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    container_name: es-rag
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
+    entrypoint: >
+      bash -c "
+        if ! elasticsearch-plugin list | grep -q 'analysis-nori'; then
+          elasticsearch-plugin install --batch analysis-nori;
+        fi;
+        exec /usr/local/bin/docker-entrypoint.sh elasticsearch
+      "
+    environment:
+      - node.name=es
+      - cluster.name=es-rag-cluster
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=1q2w3e4r
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms4g -Xmx4g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - /d/DockerVolume/elasticsearch:/usr/share/elasticsearch/data
+    networks:
+      - spring-ai-net
+
+networks:
+  spring-ai-net:
+    driver: bridge
