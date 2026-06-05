@@ -23,9 +23,9 @@ public class RagApiController {
 	}
 
 	@PostMapping( value = "/ingest-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE )
-	public Mono<String> ingestFile(@RequestPart(value = "file") MultipartFile file) {
-		return ragService.ingestFile(file)
-			.thenReturn("파일이 성공적으로 파싱 및 분할되어 Elasticsearch에 저장되었습니다: " + file.getOriginalFilename());
+	public Mono<String> ingestFile( @RequestPart( value = "file" ) MultipartFile file)  {
+		return ragService.ingestFile( file )
+			.thenReturn( "파일이 성공적으로 파싱 및 분할되어 Elasticsearch에 저장되었습니다: " + file.getOriginalFilename() );
 	}
 
 	@GetMapping( value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE )
