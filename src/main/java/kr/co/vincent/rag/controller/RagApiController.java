@@ -1,6 +1,7 @@
 package kr.co.vincent.rag.controller;
 
 import kr.co.vincent.rag.dto.DocumentRequest;
+import kr.co.vincent.rag.dto.ShoeRequest;
 import kr.co.vincent.rag.service.RagService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -32,10 +33,15 @@ public class RagApiController {
 	public Flux<String> chat( @RequestParam( value = "query" ) String query ) {
 		return ragService.chatWithDocument( query );
 	}
+	@PostMapping( value = "/ingest-shoe" )
+	public Mono<String> ingestShoe( @RequestBody ShoeRequest request ) {
+		return ragService.ingestShoeData( request.getShoeName(), request.getDescription() )
+			.thenReturn( "암벽화 데이터가 성공적으로 임베딩되었습니다." );
+	}
 
-	@PostMapping( value = "/analyze-foot", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE )
-	public Flux<String> analyzeFoot( @RequestPart( value = "file" ) MultipartFile file ) {
-		return ragService.analyzeFootAndRecommend( file );
+	@PostMapping( value = "/recommend-shoe", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE )
+	public Flux<String> recommendShoe( @RequestPart( "file" ) MultipartFile file ) {
+		return ragService.recommendShoesByFootImage( file );
 	}
 
 }

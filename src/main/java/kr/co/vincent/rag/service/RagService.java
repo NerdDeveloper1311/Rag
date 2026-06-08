@@ -6,14 +6,18 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.ai.content.Media;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.ollama.OllamaChatModel;
+import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -119,5 +123,74 @@ public class RagService {
 						return content.replace( " ", "[SPACE]" );
 					} );
 			} );
+	}
+
+	public Mono<Void> ingestShoeData( String shoeName, String description ) {
+		return Mono.fromRunnable( () -> {
+			Document doc = new Document( " 암벽화 이름: " + shoeName + "\n특징: " + description );
+			doc.getMetadata().put( "type", "climbing_show" );
+			doc.getMetadata().put( "name", shoeName );
+			vectorStore.accept( List.of( doc ) );
+			log.info( "Shoe data ingested: {}", shoeName );
+		} ).subscribeOn( Schedulers.boundedElastic() ).then();
+	}
+
+	public Flux<String> recommendShoesByFootImage( MultipartFile file ) {
+		return Mono.fromCallable( () -> {
+			byte[] bytes = file.getBytes();
+			String promptText = "이 발 이미지의 형태(이집트형, 로마형, 그리스형 중 무엇에 가까운지), 발볼의 넓이, 발등의 높이 등 암벽화 선택에 필요한 주요 특징을 짧고 명확한 텍스트로 추출해줘.";
+
+			// UserMessage userMessage = new UserMessage( promptText, List.of( new Media( MimeTypeUtils.IMAGE_JPEG, new ByteArrayResource( bytes ) ) ) );
+
+			UserMessage userMessage = UserMessage.builder()
+				.text(promptText)
+				.media(new Media(MimeTypeUtils.IMAGE_JPEG, new ByteArrayResource(bytes)))
+				.build();
+
+			Prompt visionPrompt = new Prompt( List.of( userMessage ), OllamaChatOptions.builder().model( "llama3.2-vision:11b" ).build() );// Vision 모델 지정
+
+			String footFeatures = chatModel.call( visionPrompt ).getResult().getOutput().getText();
+			log.info( "분석된 발 특징: {}", footFeatures );
+
+			return footFeatures;
+		} )
+		.subscribeOn( Schedulers.boundedElastic() )
+		.flatMapMany( footFeatures -> {
+			List<Document> similarShoes = vectorStore.similaritySearch( footFeatures );
+			String context = similarShoes.stream()
+				.map( Document::getText )
+				.collect( Collectors.joining( "\n\n" ) );
+
+			String systemPromptText = """
+				당신은 전문 암벽화 추천 AI입니다.
+				아래 사용자의 [발 특징]과 [암벽화 데이터베이스]를 비교하여 가장 알맞은 암벽화를 추천해주세요.
+				추천 이유도 상세히 설명해주세요. 데이터베이스에 적합한 신발이 없다면 솔직하게 말해주세요.
+				
+				[발 특징]
+				{footFeatures}
+				
+				[암벽화 데이터베이스]
+				{context}
+			""";
+
+			SystemPromptTemplate template = new SystemPromptTemplate( systemPromptText );
+			String formattedPrompt = template.render( Map.of(
+				"footFeatures", footFeatures,
+				"context", context
+			) );
+
+			Prompt chatPrompt = new Prompt( formattedPrompt );
+
+			return chatModel.stream( chatPrompt )
+				.map( chunk -> {
+					if ( chunk == null || chunk.getResult() == null || chunk.getResult().getOutput() == null ) {
+						return "";
+					}
+
+					String content = chunk.getResult().getOutput().getText();
+
+					return content != null ? content.replace( " ", "[SPACE]" ) : "";
+				} );
+		} );
 	}
 }
