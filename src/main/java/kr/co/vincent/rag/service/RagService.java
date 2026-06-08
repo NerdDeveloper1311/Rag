@@ -1,5 +1,6 @@
 package kr.co.vincent.rag.service;
 
+import kr.co.vincent.rag.dto.ShoeRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -125,22 +126,29 @@ public class RagService {
 			} );
 	}
 
-	public Mono<Void> ingestShoeData( String shoeName, String description ) {
+	public Mono<Void> ingestShoeData( ShoeRequest shoe ) {
 		return Mono.fromRunnable( () -> {
-			Document doc = new Document( " 암벽화 이름: " + shoeName + "\n특징: " + description );
-			doc.getMetadata().put( "type", "climbing_show" );
-			doc.getMetadata().put( "name", shoeName );
+			StringBuffer bf = new StringBuffer();
+			bf.append( "암벽화 브랜드: " + shoe.getBrand() + "\n" );
+			bf.append( "모델명: " + shoe.getShoeName() + "\n" );
+			bf.append( "족형: " + shoe.getLast() + "\n" );
+			bf.append( "강성 타입: " + shoe.getStiffness() + "\n" );
+			bf.append( "힐컵 크기: " + shoe.getHillCupSize() + "\n" );
+			bf.append( "주요 용도: " + shoe.getMainUses() + "\n" );
+			bf.append( "특징: " + shoe.getDescription() );
+
+			Document doc = new Document( bf.toString() );
+			doc.getMetadata().put( "type", "climbing_shoe" );
+			doc.getMetadata().put( "name", shoe.getShoeName() );
 			vectorStore.accept( List.of( doc ) );
-			log.info( "Shoe data ingested: {}", shoeName );
+			log.info( "Shoe data ingested: {}", shoe.getShoeName() );
 		} ).subscribeOn( Schedulers.boundedElastic() ).then();
 	}
 
 	public Flux<String> recommendShoesByFootImage( MultipartFile file ) {
 		return Mono.fromCallable( () -> {
 			byte[] bytes = file.getBytes();
-			String promptText = "이 발 이미지의 형태(이집트형, 로마형, 그리스형 중 무엇에 가까운지), 발볼의 넓이, 발등의 높이 등 암벽화 선택에 필요한 주요 특징을 짧고 명확한 텍스트로 추출해줘.";
-
-			// UserMessage userMessage = new UserMessage( promptText, List.of( new Media( MimeTypeUtils.IMAGE_JPEG, new ByteArrayResource( bytes ) ) ) );
+			String promptText = "이 발 이미지의 형태(이집트형, 로마형, 그리스형 중 무엇에 가까운지), 발볼의 넓이, 발등의 높이 등 암벽화 선택에 필요한 주요 특징을 짧고 명확한 텍스트로 추출해줘. 이미지 분석이 어렵다면 발 사진 찍는 방법을 말해줘.";
 
 			UserMessage userMessage = UserMessage.builder()
 				.text(promptText)
@@ -188,8 +196,9 @@ public class RagService {
 					}
 
 					String content = chunk.getResult().getOutput().getText();
+					if ( content == null ) return "";
 
-					return content != null ? content.replace( " ", "[SPACE]" ) : "";
+					return content.replace( " ", "[SPACE]" );
 				} );
 		} );
 	}

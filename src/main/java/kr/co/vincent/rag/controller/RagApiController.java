@@ -35,7 +35,7 @@ public class RagApiController {
 	}
 	@PostMapping( value = "/ingest-shoe" )
 	public Mono<String> ingestShoe( @RequestBody ShoeRequest request ) {
-		return ragService.ingestShoeData( request.getShoeName(), request.getDescription() )
+		return ragService.ingestShoeData( request )
 			.thenReturn( "암벽화 데이터가 성공적으로 임베딩되었습니다." );
 	}
 

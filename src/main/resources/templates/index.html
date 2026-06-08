@@ -60,7 +60,12 @@
         <div class="tab-pane fade" id="shoe" role="tabpanel">
             <div class="card p-4 shadow-sm w-75 mx-auto">
                 <h5 class="mb-3">👟 암벽화 스펙 데이터 주입</h5>
-                <input type="text" id="shoeNameInput" class="form-control mb-2" placeholder="암벽화 모델명 (예: 라스포르티바 솔루션)" />
+                <input type="text" id="brandInput" class="form-control mb-2" placeholder="암벽화 브랜드 (예: 라 스포르티바)" />
+                <input type="text" id="shoeNameInput" class="form-control mb-2" placeholder="암벽화 모델명 (예: 솔루션)" />
+                <input type="text" id="lastInput" class="form-control mb-2" placeholder="족형 (예: 다운토/턴인(비대칭))" />
+                <input type="text" id="stiffnessInput" class="form-control mb-2" placeholder="강성 타입 (예: 중간, 중약, 강함)" />
+                <input type="text" id="hillCupSizeInput" class="form-control mb-2" placeholder="힐컵 크기 (예: 중간, 큼)" />
+                <input type="text" id="mainUsesInput" class="form-control mb-2" placeholder="주요 용토 (예: 볼더링, 리드, 올라운드)" />
                 <textarea id="shoeDescInput" class="form-control mb-3" rows="5" placeholder="특징 입력 (예: 다운토가 심하며 볼더링에 적합. 발볼이 좁고 발등이 높은 사람에게 추천.)"></textarea>
                 <button onclick="ingestShoe()" class="btn btn-success w-100">벡터 DB에 저장</button>
                 <div id="shoeStatus" class="mt-2 small text-success fw-bold text-center"></div>
@@ -161,22 +166,32 @@
 
     // --- 2. 암벽화 스펙 데이터 인제스션 ---
     async function ingestShoe() {
-        const name = document.getElementById('shoeNameInput').value;
+        const brand = document.getElementById('brandInput').value;
+        const shoeName = document.getElementById('shoeNameInput').value;
+        const last = document.getElementById('lastInput').value;
+        const stiffness = document.getElementById('stiffnessInput').value;
+        const hillCupSize = document.getElementById('hillCupSizeInput').value;
+        const mainUses = document.getElementById('mainUsesInput').value;
         const desc = document.getElementById('shoeDescInput').value;
         const statusDiv = document.getElementById('shoeStatus');
 
-        if(!name.trim() || !desc.trim()) { alert('모든 정보를 입력하세요.'); return; }
+        if(!shoeName.trim() || !desc.trim()) { alert('모든 정보를 입력하세요.'); return; }
 
         statusDiv.innerText = "저장 중...";
         try {
             const response = await fetch('/api/rag/ingest-shoe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ shoeName: name, description: desc })
+                body: JSON.stringify({ brand: brand, shoeName: shoeName, last: last, stiffness: stiffness, hillCupSize: hillCupSize, mainUses: mainUses, description: desc })
             });
             const result = await response.text();
             statusDiv.innerText = result;
+            document.getElementById('brandInput').value = '';
             document.getElementById('shoeNameInput').value = '';
+            document.getElementById('lastInput').value = '';
+            document.getElementById('stiffnessInput').value = '';
+            document.getElementById('hillCupSizeInput').value = '';
+            document.getElementById('mainUsesInput').value = '';
             document.getElementById('shoeDescInput').value = '';
         } catch (error) {
             statusDiv.innerText = "저장 실패: " + error;
