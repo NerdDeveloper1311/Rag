@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Local LLM RAG System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         body { background-color: #f8f9fa; }
+        .chat-box { height: 400px; overflow-y: auto; background: white; border: 1px solid #dee2e6; padding: 15px; border-radius: 5px; }
+        .user-msg { background: #e3f2fd; padding: 8px 12px; border-radius: 15px; display: inline-block; max-width: 80%; float: right; clear: both; margin-bottom: 10px; }
+        .ai-msg { background: #f1f3f5; padding: 12px 15px; border-radius: 15px; display: inline-block; max-width: 80%; float: left; clear: both; margin-bottom: 10px; }
 
         /* 🌟 [개선] 채팅창 높이를 모바일 환경에 맞춰 유연하게 조정 (최대 500px, 최소 350px) */
         .chat-box {
@@ -60,6 +62,20 @@
 
 <div class="container px-3 py-4 mt-md-4">
     <h2 class="text-center mb-4 fs-3 fw-bold">🤖 Local RAG System<br class="d-block d-sm-none"> <span class="fs-5 text-muted">(Ollama + Elasticsearch)</span></h2>
+<div class="container mt-5 mb-5">
+    <h2 class="text-center mb-4">🧗‍♂️ AI 기반 암벽화 맞춤 추천 시스템</h2>
+
+    <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="recommend-tab" data-bs-toggle="tab" data-bs-target="#recommend" type="button" role="tab">1. 발 이미지로 암벽화 추천</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="shoe-tab" data-bs-toggle="tab" data-bs-target="#shoe" type="button" role="tab">2. 암벽화 데이터 임베딩 (Admin)</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">3. 일반 RAG 챗봇</button>
+        </li>
+    </ul>
 
     <div class="row g-4">
         <div class="col-12 col-lg-4">
@@ -74,6 +90,27 @@
                 <input type="file" id="fileInput" class="form-control mb-3" accept=".txt,.pdf,.docx,.xlsx,.hwp"/>
                 <button onclick="uploadFile()" class="btn btn-success w-100">파일 업로드 및 저장</button>
                 <div id="fileStatus" class="mt-2 small text-success fw-bold"></div>
+    <div class="tab-content" id="myTabContent">
+
+        <div class="tab-pane fade show active" id="recommend" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card p-3 shadow-sm">
+                        <h5>📸 내 발 이미지 업로드</h5>
+                        <p class="text-muted small">발의 윤곽이 잘 보이는 이미지를 올려주세요.</p>
+                        <input type="file" id="footImageInput" class="form-control mb-3" accept="image/*" onchange="previewImage(event)"/>
+                        <img id="imagePreview" class="preview-img border rounded" />
+                        <button onclick="recommendShoe()" class="btn btn-primary w-100">이미지 분석 및 추천 받기</button>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card p-3 shadow-sm">
+                        <h5>🤖 추천 결과</h5>
+                        <div id="recommendChatBox" class="chat-box mb-3">
+                            <div class="ai-msg">이미지를 업로드하면 Vision 모델이 발을 분석하여 알맞은 암벽화를 추천합니다.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -87,50 +124,83 @@
                 <div class="input-group">
                     <input type="text" id="queryInput" class="form-control" placeholder="질문을 입력하세요..." onkeypress="if(event.keyCode==13) sendQuery()">
                     <button onclick="sendQuery()" class="btn btn-dark px-3 px-sm-4">질문</button>
+        <div class="tab-pane fade" id="shoe" role="tabpanel">
+            <div class="card p-4 shadow-sm w-75 mx-auto">
+                <h5 class="mb-3">👟 암벽화 스펙 데이터 주입</h5>
+                <input type="text" id="brandInput" class="form-control mb-2" placeholder="암벽화 브랜드 (예: 라 스포르티바)" />
+                <input type="text" id="shoeNameInput" class="form-control mb-2" placeholder="암벽화 모델명 (예: 솔루션)" />
+                <input type="text" id="lastInput" class="form-control mb-2" placeholder="족형 (예: 다운토/턴인(비대칭))" />
+                <input type="text" id="stiffnessInput" class="form-control mb-2" placeholder="강성 타입 (예: 중간, 중약, 강함)" />
+                <input type="text" id="hillCupSizeInput" class="form-control mb-2" placeholder="힐컵 크기 (예: 중간, 큼)" />
+                <input type="text" id="mainUsesInput" class="form-control mb-2" placeholder="주요 용토 (예: 볼더링, 리드, 올라운드)" />
+                <textarea id="shoeDescInput" class="form-control mb-3" rows="5" placeholder="특징 입력 (예: 다운토가 심하며 볼더링에 적합. 발볼이 좁고 발등이 높은 사람에게 추천.)"></textarea>
+                <button onclick="ingestShoe()" class="btn btn-success w-100">벡터 DB에 저장</button>
+                <div id="shoeStatus" class="mt-2 small text-success fw-bold text-center"></div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="basic" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card p-3 shadow-sm mb-3">
+                        <h5>문서 지식 주입</h5>
+                        <textarea id="documentInput" class="form-control mb-3" rows="4"></textarea>
+                        <button onclick="ingestDocument()" class="btn btn-secondary w-100">텍스트 저장</button>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card p-3 shadow-sm">
+                        <h5>일반 Q&A</h5>
+                        <div id="chatBox" class="chat-box mb-3"></div>
+                        <div class="input-group">
+                            <input type="text" id="queryInput" class="form-control" placeholder="질문..." onkeypress="if(event.keyCode==13) sendQuery()">
+                            <button onclick="sendQuery()" class="btn btn-dark">질문하기</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
 <script>
-    // 1. 기존 텍스트 주입 요청
-    async function ingestDocument() {
-        const content = document.getElementById('documentInput').value;
-        const statusDiv = document.getElementById('ingestStatus');
-        if(!content.trim()) { alert('내용을 입력하세요.'); return; }
-        statusDiv.innerText = "임베딩 및 저장 중...";
-        try {
-            const response = await fetch('/api/rag/ingest', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: content })
-            });
-            const result = await response.text();
-            statusDiv.innerText = result;
-            document.getElementById('documentInput').value = '';
-        } catch (error) {
-            statusDiv.innerText = "저장 실패: " + error;
+    // --- 이미지 프리뷰 로직 ---
+    function previewImage(event) {
+        const reader = new FileReader();
+        const imageField = document.getElementById("imagePreview");
+        reader.onload = function() {
+            if (reader.readyState === 2) {
+                imageField.src = reader.result;
+                imageField.style.display = 'block';
+            }
         }
+        reader.readAsDataURL(event.target.files[0]);
     }
 
+    // --- 1. 발 이미지 업로드 및 추천 ---
+    async function recommendShoe() {
+        const fileInput = document.getElementById('footImageInput');
+        if (fileInput.files.length === 0) { alert("이미지를 선택하세요."); return; }
     // 파일 인제스션 요청 처리
     async function uploadFile() {
         const fileInput = document.getElementById('fileInput');
         const fileStatus = document.getElementById('fileStatus');
 
-        if (fileInput.files.length === 0) {
-            alert("업로드할 파일을 선택해 주세요.");
-            return;
-        }
+        const chatBox = document.getElementById('recommendChatBox');
+        chatBox.innerHTML += `<div class="user-msg">사진을 보냈습니다. 제 발에 맞는 암벽화를 추천해주세요.</div>`;
+
+        const aiDiv = document.createElement('div');
+        aiDiv.className = 'ai-msg';
+        aiDiv.innerText = 'Vision 모델이 발 이미지를 분석하고 있습니다. 잠시만 기다려주세요... (약 10~30초 소요)';
+        chatBox.appendChild(aiDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
 
         const formData = new FormData();
         formData.append("file", fileInput.files[0]);
 
-        fileStatus.innerText = "문서 분석 및 벡터화 진행 중...";
-
         try {
-            const response = await fetch('/api/rag/ingest-file', {
+            const response = await fetch('/api/rag/recommend-shoe', {
                 method: 'POST',
                 body: formData
             });
@@ -148,6 +218,10 @@
         const query = queryInput.value;
         if (!query.trim()) return;
 
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let isFirst = true;
+            let rawMarkdownBuffer = "";
         const chatBox = document.getElementById('chatBox');
 
         // 사용자 메시지 화면 추가
@@ -170,12 +244,30 @@
         let isFirst = true;
         let rawMarkdownBuffer = "";
 
-        eventSource.onmessage = function (event) {
-            if (isFirst) {
-                aiDiv.innerText = '';
-                isFirst = false;
-            }
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
 
+                let chunkText = decoder.decode(value, { stream: true });
+
+                // Spring Data SSE 형식인 'data:' 접두사 제거
+                const lines = chunkText.split('\n');
+                for (let line of lines) {
+                    if (line.startsWith('data:')) {
+                        let data = line.replace('data:', '');
+                        data = data.replaceAll('[SPACE]', ' ');
+
+                        if (isFirst) { aiDiv.innerText = ''; isFirst = false; }
+                        rawMarkdownBuffer += data;
+                        aiDiv.innerHTML = marked.parse(rawMarkdownBuffer);
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+                }
+            }
+        } catch (error) {
+            aiDiv.innerText = "분석 중 오류가 발생했습니다: " + error;
+        }
+    }
             let data = event.data;
             data = data.replaceAll('[SPACE]', ' ');
             rawMarkdownBuffer += data;
@@ -183,10 +275,42 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         };
 
-        eventSource.onerror = function (err) {
-            eventSource.close();
-        };
+    // --- 2. 암벽화 스펙 데이터 인제스션 ---
+    async function ingestShoe() {
+        const brand = document.getElementById('brandInput').value;
+        const shoeName = document.getElementById('shoeNameInput').value;
+        const last = document.getElementById('lastInput').value;
+        const stiffness = document.getElementById('stiffnessInput').value;
+        const hillCupSize = document.getElementById('hillCupSizeInput').value;
+        const mainUses = document.getElementById('mainUsesInput').value;
+        const desc = document.getElementById('shoeDescInput').value;
+        const statusDiv = document.getElementById('shoeStatus');
+
+        if(!shoeName.trim() || !desc.trim()) { alert('모든 정보를 입력하세요.'); return; }
+
+        statusDiv.innerText = "저장 중...";
+        try {
+            const response = await fetch('/api/rag/ingest-shoe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ brand: brand, shoeName: shoeName, last: last, stiffness: stiffness, hillCupSize: hillCupSize, mainUses: mainUses, description: desc })
+            });
+            const result = await response.text();
+            statusDiv.innerText = result;
+            document.getElementById('brandInput').value = '';
+            document.getElementById('shoeNameInput').value = '';
+            document.getElementById('lastInput').value = '';
+            document.getElementById('stiffnessInput').value = '';
+            document.getElementById('hillCupSizeInput').value = '';
+            document.getElementById('mainUsesInput').value = '';
+            document.getElementById('shoeDescInput').value = '';
+        } catch (error) {
+            statusDiv.innerText = "저장 실패: " + error;
+        }
     }
+
+    // (기존 텍스트 주입 및 일반 Chat 코드는 유지 - 생략 가능)
+    // 기존 스크립트의 ingestDocument, sendQuery 함수들을 복사해서 넣어주세요.
 </script>
 </body>
 </html>
