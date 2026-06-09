@@ -10,7 +10,7 @@ spring:
                     temperature: 0.5
             embedding:
                 options:
-                    model: embeddinggemma
+                    model: bge-m3
         vectorstore:
             elasticsearch:
                 initialize-schema: false
@@ -40,3 +40,8 @@ spring:
 logging:
     pattern:
         console: "%clr(%-5level){green} %clr(%logger.%M\\(\\)){cyan}: %msg%n"
+management:
+    endpoints:
+        web:
+            exposure:
+                include: "metrics"

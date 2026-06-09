@@ -33,9 +33,4 @@ public class RagApiController {
 		return ragService.chatWithDocument( query );
 	}
 
-	@PostMapping( value = "/analyze-foot", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE )
-	public Flux<String> analyzeFoot( @RequestPart( value = "file" ) MultipartFile file ) {
-		return ragService.analyzeFootAndRecommend( file );
-	}
-
 }
