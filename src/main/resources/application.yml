@@ -7,7 +7,7 @@ spring:
             chat:
                 options:
                     model: gemma4:e4b
-                    temperature: 0.5
+                    temperature: 0.7
             embedding:
                 options:
                     model: bge-m3

@@ -7,13 +7,21 @@ public class ShoeRequest {
 
 	private String brand;
 
-	private String shoeName;
+	private String model;
 
-	private String last;
+	private String footShape;
 
-	private String stiffness;
+	private String wallSize;
 
-	private String hillCupSize;
+	private String padType;
+
+	private String padClass;
+
+	private String toeBoxSize;
+
+	private String heelCupSize;
+
+	private String heelCupHardness;
 
 	private String mainUses;
 
