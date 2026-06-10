@@ -99,8 +99,8 @@
                     <div class="card p-3 shadow-sm">
                         <h5 class="fw-bold fs-6">📸 내 발 이미지 업로드</h5>
                         <p class="text-muted small">발의 윤곽이 잘 보이는 이미지를 올려주세요.</p>
-                        <input type="file" id="footImageInput" class="form-control mb-3" accept="image/*" onchange="previewImage(event)"/>
-                        <img id="imagePreview" class="preview-img border rounded" alt="발 이미지 미리보기"/>
+                        <input type="file" id="footImageInput" class="form-control mb-3" accept="image/*" multiple onchange="previewImage(event)"/>
+                        <div id="imagePreviewContainer" class="d-flex flex-wrap gap-2"></div>
                         <button onclick="recommendShoe()" class="btn btn-primary w-100">이미지 분석 및 추천 받기</button>
                     </div>
                 </div>
@@ -211,10 +211,13 @@
         chatBox.scrollTop = chatBox.scrollHeight;
 
         const formData = new FormData();
-        formData.append("file", fileInput.files[0]);
+        // formData.append("file", fileInput.files[0]);
+        for ( let i = 0 ; i < fileInput.files.length ; i++ ) {
+            formData.append( "files", fileInput.files[i] );
+        }
 
         try {
-            const response = await fetch('/api/rag/recommend-shoe', {
+            const response = await fetch('/api/rag/recommend-shoes', {
                 method: 'POST',
                 body: formData
             });
