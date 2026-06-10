@@ -18,17 +18,14 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -151,30 +148,31 @@ public class RagService {
 		} ).subscribeOn( Schedulers.boundedElastic() ).then();
 	}
 
-	public Flux<String> recommendShoesByFootImage( List<MultipartFile> files ) {
+	public Flux<String> recommendShoesByFootImage( MultipartFile file ) {
 		return Mono.fromCallable( () -> {
-				if ( files == null || files.isEmpty() ) return "REJECT_IMAGE";
-
-				StringBuilder integratedFeatures = new StringBuilder();
-				int imageIndex = 1;
+				byte[] bytes = file.getBytes();
 
 				// 1. 프롬프트 구조화 및 가이드라인 출력 조건 명시
 				String promptText = """
-                당신은 발 이미지를 판별하는 전문 분석가입니다. 
-                제공된 여러 장의 발 이미지를 종합하여 발의 형태, 발볼, 발등을 분석하십시오.
-                반드시 한국어(Korean)로만 자연스럽게 답변하십시오.
-                
-                [분석 가능 여부 체크]
-                제공된 이미지에서 발의 형태, 발볼, 발등을 명확히 식별할 수 있는지 확인하세요.
-                만약 사진이 심하게 흔들렸거나, 어둡거나, 구도가 불량하거나, 발 전체가 보이지 않는 등 분석이 불가능하다면 
-                다른 설명 없이 정확히 오직 "REJECT_IMAGE" 라고만 답변하십시오.
-                
-                [분석 지시사항]
-                이미지 분석이 가능하다면, 아래 3가지 요소를 명확히 도출해 주세요.
-                1. 발 형태 (이집트형, 로마형, 그리스형 중 해당 항목)
-                2. 발볼의 상대적인 넓이 (넓음, 보통, 좁음)
-                3. 발등의 높낮이 (높음, 보통, 낮음)
-            """;
+	                당신은 발 이미지를 판별하는 전문 분석가입니다. 
+	                반드시 한국어(Korean)로만 자연스럽게 답변하십시오.
+	                
+	                [분석 가능 여부 체크]
+	                제공된 이미지에서 발의 형태, 발볼, 발등을 명확히 식별할 수 있는지 확인하세요.
+	                만약 사진이 심하게 흔들렸거나, 어둡거나, 구도가 불량하거나, 발 전체가 보이지 않는 등 분석이 불가능하다면 
+	                다른 설명 없이 정확히 오직 "REJECT_IMAGE" 라고만 답변하십시오.
+	                
+	                [분석 지시사항]
+	                이미지 분석이 가능하다면, 아래 3가지 요소를 명확히 도출해 주세요.
+	                1. 발 형태 (이집트형, 로마형, 그리스형 중 해당 항목)
+	                2. 발볼의 상대적인 넓이 (넓음, 보통, 좁음)
+	                3. 발등의 높낮이 (높음, 보통, 낮음)
+                """;
+
+				UserMessage userMessage = UserMessage.builder()
+					.text( promptText )
+					.media( new Media( MimeTypeUtils.IMAGE_JPEG, new ByteArrayResource( bytes ) ) )
+					.build();
 
 				OllamaChatOptions options = OllamaChatOptions.builder()
 					.model( "llama3.2-vision:11b" )
@@ -184,49 +182,29 @@ public class RagService {
 					.repeatPenalty( 1.3 )
 					.build();
 
-				for ( MultipartFile file : files ) {
-					if ( file.isEmpty() ) continue;
+				Prompt visionPrompt = new Prompt( List.of( userMessage ), options );
 
-					String contentType = file.getContentType();
-					MimeType mimeType = ( contentType != null ) ? MimeType.valueOf( contentType ) : MimeTypeUtils.IMAGE_JPEG;
+				String footFeatures = chatModel.call(visionPrompt).getResult().getOutput().getText();
+				log.info( "분석된 발 특징 / 판정 결과: {}", footFeatures );
 
-					UserMessage userMessage = UserMessage.builder()
-						.text( promptText )
-						.media( new Media( mimeType, new ByteArrayResource( file.getBytes() ) ) )
-						.build();
-
-					Prompt visionPrompt = new Prompt( List.of( userMessage ), options );
-
-					String singleAnalysis = chatModel.call( visionPrompt ).getResult().getOutput().getText();
-					log.info( "[이미지 {}번 분석 결과]: {}", imageIndex, singleAnalysis );
-
-					if ( singleAnalysis.contains( "REJECT_IMAGE" ) ) {
-						return "REJECT_IMAGE";
-					}
-
-					integratedFeatures.append("[사진 ").append(imageIndex).append("번 분석 결과]\n")
-						.append(singleAnalysis.trim()).append("\n\n");
-					imageIndex++;
-				}
-
-				return integratedFeatures.toString().trim();
+				return footFeatures.trim();
 			} )
 			.subscribeOn( Schedulers.boundedElastic() )
 			.flatMapMany( footFeatures -> {
 				// [1번 요구사항] 이미지 인식 실패 시 정형화된 촬영 가이드라인 즉시 반환 (추천 로직 건너뜀)
 				if ( footFeatures.contains( "REJECT_IMAGE" ) || footFeatures.length() < 5 ) {
 					String guideMessage = """
-                    ⚠️ **죄송합니다. 제공해주신 사진으로는 발의 특징을 정확하게 분석하기 어렵습니다.**
-                    
-                    정확한 암벽화 추천을 위해 아래 가이드라인을 참고하여 사진을 다시 촬영해 주세요!
-                    
-                    ### 📸 발 사진 촬영 가이드라인
-                    1. **밝은 조명** 아래 바닥에 **흰 종이(A4 용지 등)**를 깔고 그 위에 발을 올려놓고 촬영해 주세요.
-                    2. 카메라를 **수직 위(탑뷰)** 및 **대각선 옆면**에서 각각 촬영해 주시면 가장 정확합니다.
-                    3. 발의 **윤곽선**과 **발가락 배열(길이 관계)**이 흐릿하지 않고 명확하게 나타나야 합니다.
-                    
-                    다시 시도해 주시면 최고의 암벽화를 찾아드리겠습니다! 😊
-                """;
+	                    ⚠️ **죄송합니다. 제공해주신 사진으로는 발의 특징을 정확하게 분석하기 어렵습니다.**
+	                    
+	                    정확한 암벽화 추천을 위해 아래 가이드라인을 참고하여 사진을 다시 촬영해 주세요!
+	                    
+	                    ### 📸 발 사진 촬영 가이드라인
+	                    1. **밝은 조명** 아래 바닥에 **흰 종이(A4 용지 등)**를 깔고 그 위에 발을 올려놓고 촬영해 주세요.
+	                    2. 카메라를 **수직 위(탑뷰)** 및 **대각선 옆면**에서 각각 촬영해 주시면 가장 정확합니다.
+	                    3. 발의 **윤곽선**과 **발가락 배열(길이 관계)**이 흐릿하지 않고 명확하게 나타나야 합니다.
+	                    
+	                    다시 시도해 주시면 최고의 암벽화를 찾아드리겠습니다! 😊
+                    """;
 					return Flux.just( guideMessage );
 				}
 
@@ -237,28 +215,28 @@ public class RagService {
 
 				// [2번 요구사항] 최종 답변의 가독성을 높이기 위한 시스템 프롬프트 수정
 				String systemPromptText = """
-                당신은 전문 암벽화 추천 AI 전문가입니다.
-                반드시 한국어로 자연스럽고 정중하게 답변하십시오.
-                
-                사용자가 제공한 여러 장의 사진 분석 결과([발 특징])들을 종합적으로 검토하여, [암벽화 데이터베이스]와 비교 후 가장 알맞은 암벽화를 추천하고 그 이유를 상세히 설명해주세요.
-                만약 데이터베이스에 적합한 신발이 없다면 솔직하게 안내하십시오.
-                
-                [출력 가이드라인 (반드시 준수)]
-                사용자가 읽기 편하도록 Markdown 문법을 적극적으로 활용하여 답변을 구조화하세요.
-                - ##, ### 등의 헤더를 사용하여 섹션을 나누세요.
-                - 추천하는 상품명은 **볼드체**로 강조하세요.
-                - 추천 이유, 사이즈 팁 등은 불릿 포인트(`-`)나 번호 매기기를 활용하여 가독성을 높이세요.
-                - 마지막에는 친절한 마무리 인사를 덧붙여주세요.
-                - 용어 설명 표를 작성할 때는 각 행의 내용을 생략하거나 말을 흐리지 말고 반드시 완성된 문장으로 작성하세요.
-				- 단어나 문장이 중간에 끊기지 않도록 문맥의 흐름을 자연스럽게 유지하세요.
-				- '영어어', '손홀' 등 존재하지 않는 축약어를 만들지 마세요.
-                
-                [발 특징]
-                {footFeatures}
-                
-                [암벽화 데이터베이스]
-                {context}
-            """;
+	                당신은 전문 암벽화 추천 AI 전문가입니다.
+	                반드시 한국어로 자연스럽고 정중하게 답변하십시오.
+	                
+	                사용자의 [발 특징]과 [암벽화 데이터베이스]를 비교하여 가장 알맞은 암벽화를 추천하고, 그 이유를 상세히 설명해주세요.
+	                만약 데이터베이스에 적합한 신발이 없다면 솔직하게 안내하십시오.
+	                
+	                [출력 가이드라인 (반드시 준수)]
+	                사용자가 읽기 편하도록 Markdown 문법을 적극적으로 활용하여 답변을 구조화하세요.
+	                - ##, ### 등의 헤더를 사용하여 섹션을 나누세요.
+	                - 추천하는 상품명은 **볼드체**로 강조하세요.
+	                - 추천 이유, 사이즈 팁 등은 불릿 포인트(`-`)나 번호 매기기를 활용하여 가독성을 높이세요.
+	                - 마지막에는 친절한 마무리 인사를 덧붙여주세요.
+	                - 용어 설명 표를 작성할 때는 각 행의 내용을 생략하거나 말을 흐리지 말고 반드시 완성된 문장으로 작성하세요.
+					- 단어나 문장이 중간에 끊기지 않도록 문맥의 흐름을 자연스럽게 유지하세요.
+					- '영어어', '손홀' 등 존재하지 않는 축약어를 만들지 마세요.
+	                
+	                [발 특징]
+	                {footFeatures}
+	                
+	                [암벽화 데이터베이스]
+	                {context}
+                """;
 
 				SystemPromptTemplate template = new SystemPromptTemplate( systemPromptText );
 				String formattedPrompt = template.render( Map.of(
@@ -280,7 +258,7 @@ public class RagService {
 
 						// 로컬 LLM에서 간혹 발생하는 특수 제어 문자나 비정상 공백 제거
 						return content.replace( "\uFFFD", "" ); // 깨진 문자 기호 제거
-					} );
-			} );
+					});
+			});
 	}
 }

@@ -10,8 +10,6 @@ import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-
 @RestController
 @RequestMapping( value = "/api/rag" )
 @RequiredArgsConstructor
@@ -41,9 +39,9 @@ public class RagApiController {
 			.thenReturn( "암벽화 데이터가 성공적으로 임베딩되었습니다." );
 	}
 
-	@PostMapping( value = "/recommend-shoes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE )
-	public Flux<String> recommendShoe( @RequestPart( "files" ) List<MultipartFile> files) {
-		return ragService.recommendShoesByFootImage( files );
+	@PostMapping( value = "/recommend-shoe", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE )
+	public Flux<String> recommendShoe( @RequestPart( "file" ) MultipartFile file ) {
+		return ragService.recommendShoesByFootImage( file );
 	}
 
 }
