@@ -3,537 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>암벽화 추천 및 Local RAG 시스템</title>
+    <title>Gemini Multimodal Center</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
-        body { background-color: #f8f9fa; position: relative; min-height: 100vh; padding-bottom: 60px; }
-
-        .chat-box {
-            height: 50vh;
-            min-height: 350px;
-            max-height: 500px;
-            overflow-y: auto;
-            background: white;
-            border: 1px solid #dee2e6;
-            padding: 15px;
-            border-radius: 5px;
-        }
-
-        .user-msg {
-            background: #e3f2fd;
-            padding: 8px 12px;
-            border-radius: 15px;
-            display: inline-block;
-            max-width: 90%;
-            float: right;
-            clear: both;
-            margin-bottom: 10px;
-            word-break: break-all;
-        }
-
-        /* 피드백 버튼 정렬을 위해 래퍼 스타일 추가 */
-        .ai-msg-wrapper {
-            float: left;
-            clear: both;
-            max-width: 90%;
-            margin-bottom: 10px;
-        }
-
-        .ai-msg {
-            background: #f1f3f5;
-            padding: 12px 15px;
-            border-radius: 15px;
-            display: block;
-            word-break: break-all;
-        }
-
-        /* 피드백 버튼 디자인 */
-        .feedback-buttons {
-            margin-top: 5px;
-            padding-left: 5px;
-        }
-        .feedback-btn {
-            background: none;
-            border: none;
-            color: #6c757d;
-            font-size: 0.9rem;
-            margin-right: 10px;
-            cursor: pointer;
-            padding: 2px 5px;
-            transition: color 0.2s;
-        }
-        .feedback-btn:hover { color: #212529; }
-        .feedback-btn.active-like { color: #0d6efd; font-weight: bold; }
-        .feedback-btn.active-dislike { color: #dc3545; font-weight: bold; }
-
-        .ai-msg p:last-child { margin-bottom: 0; }
-        .ai-msg ul, .ai-msg ol { padding-left: 20px; }
-        .ai-msg table { width: 100%; overflow-x: auto; display: block; }
-
-        .preview-img { max-width: 100%; height: auto; display: none; margin-bottom: 15px; }
-
-        .mini-monitor {
-            position: fixed;
-            bottom: 15px;
-            right: 15px;
-            background: rgba(33, 37, 41, 0.95);
-            color: #0f0;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
-            padding: 10px;
-            border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 1050;
-            max-width: 280px;
-            border: 1px solid #444;
-        }
-        .mini-monitor h6 { font-size: 12px; color: #fff; margin-bottom: 5px; border-bottom: 1px solid #444; padding-bottom: 3px; }
+        :root { --sidebar-bg: #171717; --chat-bg: #212121; --input-bg: #2f2f2f; --text-light: #eceecf; }
+        body { background-color: var(--chat-bg); color: #fff; min-height: 100vh; display: flex; }
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); flex-shrink: 0; display: flex; flex-direction: column; justify-content: space-between; border-right: 1px solid #333; }
+        .main-chat-area { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; position: relative; }
+        .chat-container { flex-grow: 1; overflow-y: auto; padding: 40px 15%; display: flex; flex-direction: column; gap: 24px; }
+        .message-row { display: flex; width: 100%; gap: 16px; margin-bottom: 8px; }
+        .user-row { justify-content: flex-end; }
+        .chat-bubble { max-width: 80%; padding: 14px 20px; border-radius: 18px; font-size: 1rem; line-height: 1.6; word-break: break-all; }
+        .user-bubble { background-color: #303030; color: #f5f5f5; border-bottom-right-radius: 4px; }
+        .ai-bubble { background-color: transparent; color: #e3e3e3; border-bottom-left-radius: 4px; }
+        .input-wrapper-zone { padding: 10px 15% 30px 15%; background: linear-gradient(transparent, var(--chat-bg) 30%); }
+        .modern-input-box { background-color: var(--input-bg); border: 1px solid #424242; border-radius: 26px; padding: 8px 16px; display: flex; flex-direction: column; }
+        .inner-textarea { background: transparent; border: none; color: #fff; resize: none; max-height: 200px; outline: none; padding: 8px 4px; }
+        .control-panel-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+        .preview-thumbnails-pane { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+        .thumb-img-frame { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid #555; position: relative; }
+        .btn-icon-action { background: none; border: none; color: #b4b4b4; font-size: 1.25rem; cursor: pointer; transition: color 0.15s; }
+        .btn-icon-action:hover { color: #fff; }
+        .feedback-buttons { margin-top: 8px; display: flex; gap: 12px; }
+        .feedback-btn { background: none; border: none; color: #888; font-size: 0.85rem; cursor: pointer; }
+        .feedback-btn:hover { color: #fff; }
+        .active-like { color: #4285f4 !important; }
+        .active-dislike { color: #ea4335 !important; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
-<div class="container px-3 py-4 mt-md-4">
-    <h2 class="text-center mb-4 fs-3 fw-bold">🧗‍♂️ AI 기반 암벽화 맞춤 추천 및 RAG 시스템</h2>
+<div class="sidebar p-3 text-secondary">
+    <div>
+        <div class="text-white fw-bold fs-5 mb-4 px-2">🧗‍♂️ Climbing RAG Hub</div>
+        <nav class="nav flex-column gap-2">
+            <a class="nav-link text-white bg-dark rounded px-3 py-2" href="/"><i class="bi bi-cpu-fill me-2"></i>멀티모달 추천 센터</a>
+            <!--<a class="nav-link text-muted px-3 py-2" href="/chatbot"><i class="bi bi-chat-square-text me-2"></i>일반 지식 RAG</a>
+            <a class="nav-link text-muted px-3 py-2" href="/admin/embedding"><i class="bi bi-database-fill-gear me-2"></i>데이터 인제스션</a>-->
+        </nav>
+    </div>
+    <div class="small px-2 border-top border-dark pt-3">v2.0 Refactored</div>
+</div>
 
-    <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="recommend-tab" data-bs-toggle="tab" data-bs-target="#recommend" type="button" role="tab" aria-controls="recommend" aria-selected="true">1. 발 이미지로 암벽화 추천</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="shoe-tab" data-bs-toggle="tab" data-bs-target="#shoe" type="button" role="tab" aria-controls="shoe" aria-selected="false">2. 암벽화 데이터 임베딩 (Admin)</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab" aria-controls="basic" aria-selected="false">3. 일반 RAG 챗봇</button>
-        </li>
-    </ul>
-
-    <div class="tab-content" id="myTabContent">
-        <div class="tab-pane fade show active" id="recommend" role="tabpanel" aria-labelledby="recommend-tab">
-            <div class="row g-4">
-                <div class="col-12 col-lg-4">
-                    <div class="card p-3 shadow-sm">
-                        <h5 class="fw-bold fs-6">📸 내 발 이미지 업로드</h5>
-                        <p class="text-muted small">발의 윤곽이 잘 보이는 이미지를 올려주세요.</p>
-                        <input type="file" id="footImageInput" class="form-control mb-3" accept="image/*" onchange="previewImage(event)"/>
-                        <img id="imagePreview" class="preview-img border rounded" alt="발 이미지 미리보기"/>
-                        <button onclick="recommendShoe()" class="btn btn-primary w-100">이미지 분석 및 추천 받기</button>
-                    </div>
-                </div>
-                <div class="col-12 col-lg-8">
-                    <div class="card p-3 shadow-sm">
-                        <h5 class="fw-bold fs-6">🤖 추천 결과</h5>
-                        <div id="recommendChatBox" class="chat-box mb-3">
-                            <div class="ai-msg-wrapper">
-                                <div class="ai-msg">이미지를 업로드하면 Vision 모델이 발을 분석하여 알맞은 암벽화를 추천합니다.</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<div class="main-chat-area">
+    <div class="chat-container" id="multimodalChatBox">
+        <div class="message-row">
+            <div class="ai-bubble">
+                <h4>안녕하세요! 대화형 암벽화 매칭 센터입니다.</h4>
+                발의 특징이 잘 드러난 <strong>여러 장의 사진</strong>을 한번에 올리시거나 자유롭게 질문을 텍스트로 추가해 주시면 정밀 분석이 시작됩니다.
             </div>
         </div>
+    </div>
 
-        <div class="tab-pane fade" id="shoe" role="tabpanel" aria-labelledby="shoe-tab">
-            <div class="card p-4 shadow-sm w-100 mx-auto" style="max-width: 700px;">
-                <h5 class="mb-3 fw-bold fs-6">👟 암벽화 스펙 데이터 주입</h5>
-                <input type="text" id="brandInput" class="form-control mb-2" placeholder="암벽화 브랜드 (예: 라 스포르티바)" />
-                <input type="text" id="modelInput" class="form-control mb-2" placeholder="모델명" />
-                <input type="text" id="footShapeInput" class="form-control mb-2" placeholder="족형(이집트형, 로마형, 그리스형)" />
-                <textarea id="footShapeSpecInput" class="form-control mb-3" rows="5" placeholder="족형 특이사항"></textarea>
-                <input type="text" id="wallSizeInput" class="form-control mb-2" placeholder="발 볼 사이즈 (예: 좁음, 중간, 넓음)" />
-                <input type="text" id="padTypeInput" class="form-control mb-2" placeholder="패드 타입 (예: 하드(hard), 미디엄(medium), 소프트(soft))" />
-                <input type="text" id="toeBoxSizeInput" class="form-control mb-2" placeholder="토 박스 크기(예: 좁음, 중간, 넓음)" />
-                <input type="text" id="heelCupSizeInput" class="form-control mb-2" placeholder="힐컵 사이즈(예: 작음, 중간, 큼)" />
-                <input type="text" id="heelCupHardnessInput" class="form-control mb-2" placeholder="힐컴 경도(예: 하드(hard), 미디엄(medium), 소프트(soft))" />
-                <input type="text" id="mainUsesInput" class="form-control mb-2" placeholder="주요 용도 (예: 볼더링, 리드, 올라운드)" />
-                <textarea id="shoeDescInput" class="form-control mb-3" rows="5" placeholder="특징 입력 (예: 다운토가 심하며 볼더링에 적합. 발볼이 좁고 발등이 높은 사람에게 추천.)"></textarea>
-                <button onclick="ingestShoe()" class="btn btn-success w-100">벡터 DB에 저장</button>
-                <div id="shoeStatus" class="mt-2 small text-success fw-bold text-center"></div>
-            </div>
-        </div>
+    <div class="input-wrapper-zone">
+        <div class="modern-input-box">
+            <div id="previewThumbnails" class="preview-thumbnails-pane"></div>
 
-        <div class="tab-pane fade" id="basic" role="tabpanel" aria-labelledby="basic-tab">
-            <div class="row g-4">
-                <div class="col-12 col-lg-4">
-                    <div class="card p-3 shadow-sm mb-3">
-                        <h5 class="fw-bold fs-6">1-A. 텍스트 지식 주입</h5>
-                        <textarea id="documentInput" class="form-control mb-3" rows="4" placeholder="지식 내용을 입력하세요."></textarea>
-                        <button onclick="ingestDocument()" class="btn btn-primary w-100">텍스트 저장</button>
-                        <div id="ingestStatus" class="mt-2 small text-success fw-bold"></div>
-                    </div>
-                    <div class="card p-3 shadow-sm">
-                        <h5 class="fw-bold fs-6">1-B. 파일 지식 주입 (PDF, TXT 등)</h5>
-                        <input type="file" id="fileInput" class="form-control mb-3" accept=".txt,.pdf,.docx,.xlsx,.hwp"/>
-                        <button onclick="uploadFile()" class="btn btn-success w-100">파일 업로드 및 저장</button>
-                        <div id="fileStatus" class="mt-2 small text-success fw-bold"></div>
-                    </div>
+            <textarea id="compositeInput" class="inner-textarea" rows="1" placeholder="메시지를 입력하거나 다중 발 이미지를 첨부해 주세요..."></textarea>
+
+            <div class="control-panel-bar">
+                <div>
+                    <input type="file" id="multiImageFiles" class="d-none" accept="image/*" multiple>
+                    <button class="btn-icon-action" onclick="document.getElementById('multiImageFiles').click()" title="이미지 다중 첨부">
+                        <i class="bi bi-paperclip"></i>
+                    </button>
                 </div>
-                <div class="col-12 col-lg-8">
-                    <div class="card p-3 shadow-sm">
-                        <h5 class="fw-bold fs-6">3. 임베딩 지식 기반 Q&A</h5>
-                        <div id="chatBox" class="chat-box mb-3">
-                            <div class="ai-msg-wrapper">
-                                <div class="ai-msg">안녕하세요! 주입된 지식을 바탕으로 답변해 드립니다. 질문을 입력해주세요.</div>
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <input type="text" id="queryInput" class="form-control" placeholder="질문을 입력하세요..." onkeypress="if(event.keyCode==13) sendQuery()">
-                            <button onclick="sendQuery()" class="btn btn-dark px-3 px-sm-4">질문</button>
-                        </div>
-                    </div>
-                </div>
+                <button id="submitBtn" class="btn btn-light rounded-circle p-2 d-flex align-items-center justify-content-center" style="width:36px; height:36px;">
+                    <i class="bi bi-arrow-up-short text-dark fs-4"></i>
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="mini-monitor" th:if="${metrics != null}">
-    <h6>🖥️ Server Monitor (<span id="refresh-timer">5s</span>)</h6>
-    <div>CPU: <span th:text="${metrics.systemCpu}">0</span>%</div>
-    <div>RAM: <span th:text="${metrics.usedMemory}">0</span>/<span th:text="${metrics.totalMemory}">0</span> GB (<span th:text="${metrics.memoryPercent}">0</span>%)</div>
-    <div>GPU 3D: <span th:text="${metrics.gpu3d}">0</span>%</div>
-    <div>VRAM: <span th:text="${metrics.gpuDedicatedUsed}">0</span> / <span th:text="${metrics.gpuDedicatedTotal}">0</span> MB</div>
-</div>
-
-<script>
-    function previewImage(event) {
-        const reader = new FileReader();
-        const imageField = document.getElementById("imagePreview");
-        if(event.target.files.length === 0) {
-            imageField.style.display = 'none';
-            return;
-        }
-        reader.onload = function() {
-            if (reader.readyState === 2) {
-                imageField.src = reader.result;
-                imageField.style.display = 'block';
-            }
-        }
-        reader.readAsDataURL(event.target.files[0]);
-    }
-
-    // --- 피드백 버튼 동적 템플릿 생성기 ---
-    function createFeedbackElement(questionText, aiMsgDiv) {
-        const feedbackDiv = document.createElement('div');
-        feedbackDiv.className = 'feedback-buttons';
-
-        feedbackDiv.innerHTML = `
-            <button class="feedback-btn like-btn" onclick="sendFeedback(this, 'like')"><i class="bi bi-hand-thumbs-up"></i> 좋아요</button>
-            <button class="feedback-btn dislike-btn" onclick="sendFeedback(this, 'dislike')"><i class="bi bi-hand-thumbs-down"></i> 싫어요</button>
-        `;
-
-        // 버튼 데이터 속성에 평가할 텍스트 정보를 바인딩
-        feedbackDiv.dataset.question = questionText;
-        feedbackDiv.dataset.answer = aiMsgDiv.innerText;
-
-        return feedbackDiv;
-    }
-
-    // --- 피드백 전송 함수 (Elasticsearch 임베딩 API 호출) ---
-    async function sendFeedback(buttonElement, type) {
-        const parent = buttonElement.parentElement;
-        const question = parent.dataset.question;
-        const answer = parent.dataset.answer;
-
-        // 버튼 UX 처리 (클릭 상태 활성화)
-        const likeBtn = parent.querySelector('.like-btn');
-        const dislikeBtn = parent.querySelector('.dislike-btn');
-
-        likeBtn.classList.remove('active-like');
-        dislikeBtn.classList.remove('active-dislike');
-
-        if(type === 'like') {
-            buttonElement.classList.add('active-like');
-        } else {
-            buttonElement.classList.add('active-dislike');
-        }
-
-        try {
-            const response = await fetch('/api/rag/feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    question: question,
-                    answer: answer,
-                    score: type === 'like' ? 1 : -1
-                })
-            });
-            if(response.ok) {
-                console.log("피드백 반영 완료 및 Elasticsearch 임베딩 성공");
-            } else {
-                alert("피드백 저장 실패");
-            }
-        } catch (error) {
-            console.error("오류 발생:", error);
-        }
-    }
-
-    // --- 1. 발 이미지 업로드 및 스트리밍 추천 ---
-    async function recommendShoe() {
-        const fileInput = document.getElementById('footImageInput');
-        if (fileInput.files.length === 0) { alert("이미지를 선택하세요."); return; }
-
-        const chatBox = document.getElementById('recommendChatBox');
-        const userPrompt = "사진을 보냈습니다. 제 발에 맞는 암벽화를 추천해주세요.";
-        chatBox.innerHTML += `<div class="user-msg">${userPrompt}</div>`;
-
-        const wrapperDiv = document.createElement('div');
-        wrapperDiv.className = 'ai-msg-wrapper';
-
-        const aiDiv = document.createElement('div');
-        aiDiv.className = 'ai-msg';
-        aiDiv.innerText = 'Vision 모델이 발 이미지를 분석하고 있습니다...';
-
-        wrapperDiv.appendChild(aiDiv);
-        chatBox.appendChild(wrapperDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        const formData = new FormData();
-        formData.append("file", fileInput.files[0]);
-
-        try {
-            const response = await fetch('/api/rag/recommend-shoe', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) throw new Error("서버 응답 오류");
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-            let isFirst = true;
-            let rawMarkdownBuffer = "";
-            let streamBuffer = ""; // 네트워크 쪼개짐 방지 버퍼
-
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                streamBuffer += decoder.decode(value, { stream: true });
-
-                const lines = streamBuffer.split('\n');
-                streamBuffer = lines.pop(); // 미완성 라인은 다음으로 토스
-
-                let hasNewData = false;
-
-                for (let line of lines) {
-                    let trimmed = line.trim();
-                    if (!trimmed) continue;
-
-                    let data = line;
-                    if (trimmed.startsWith('data:')) {
-                        data = line.replace(/^data:\s*/, '');
-                    }
-
-                    // 백엔드 치환 문자 원복
-                    data = data.replaceAll('[SPACE]', ' ');
-
-                    if (isFirst) {
-                        aiDiv.innerText = '';
-                        isFirst = false;
-                    }
-
-                    rawMarkdownBuffer += data; // 💡 여기서 바로 개행(\n)을 더하지 않고 원본 그대로 결합합니다.
-                    hasNewData = true;
-                }
-
-                if (hasNewData) {
-                    // 🔥 [핵심 추가] 가독성을 해치는 비정상적인 공백 및 표 깨짐 정제 로직
-                    let cleanedMarkdown = rawMarkdownBuffer
-                        // 1. 단어들 사이에 자잘하게 쪼개진 공백 제거 (한글/영문 글자 사이의 다중 공백을 하나로 축소)
-                        //    단, 마크다운 문법이나 의도된 줄바꿈이 깨지지 않도록 조정합니다.
-                        .replace(/([가-힣A-Za-z0-9])\s+([가-힣A-Za-z0-9])/g, '$1 $2')
-                        // 2. 마크다운 표(Table) 기호인 '|' 주변의 불필요한 공백 및 유령 개행 제거하여 표 구조 유지
-                        .replace(/\s*\|\s*/g, ' | ')
-                        // 3. 표 헤더 구분선인 '| : |' 형태가 찢어지는 현상 보정
-                        .replace(/\|\s*:\s*\|/g, '| : |');
-
-                    aiDiv.innerHTML = marked.parse(cleanedMarkdown);
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }
-            }
-
-// 루프 종료 후 잔여 버퍼 처리
-            if (streamBuffer.trim()) {
-                let data = streamBuffer;
-                if (streamBuffer.trim().startsWith('data:')) {
-                    data = streamBuffer.replace(/^data:\s*/, '');
-                }
-                data = data.replaceAll('[SPACE]', ' ');
-                rawMarkdownBuffer += data;
-            }
-
-// 💡 최종 출력 전 한 번 더 정제 후 반영
-            let finalCleaned = rawMarkdownBuffer
-                .replace(/([가-힣A-Za-z0-9])\s+([가-힣A-Za-z0-9])/g, '$1 $2')
-                .replace(/\s*\|\s*/g, ' | ')
-                .replace(/\|\s*:\s*\|/g, '| : |');
-
-            aiDiv.innerHTML = marked.parse(finalCleaned);
-
-            if (rawMarkdownBuffer.length > 0 && !wrapperDiv.querySelector('.feedback-buttons')) {
-                wrapperDiv.appendChild(createFeedbackElement(userPrompt, aiDiv));
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
-            fileInput.value = '';
-        } catch (error) {
-            aiDiv.innerText = "분석 중 오류가 발생했습니다: " + error.message;
-        }
-    }
-
-    // --- 2. 텍스트 지식 주입 요청 ---
-    async function ingestDocument() {
-        const content = document.getElementById('documentInput').value;
-        const statusDiv = document.getElementById('ingestStatus');
-        if(!content.trim()) { alert('내용을 입력하세요.'); return; }
-        statusDiv.innerText = "임베딩 및 저장 중...";
-        try {
-            const response = await fetch('/api/rag/ingest', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: content })
-            });
-            const result = await response.text();
-            statusDiv.innerText = result;
-            document.getElementById('documentInput').value = '';
-        } catch (error) {
-            statusDiv.innerText = "저장 실패: " + error;
-        }
-    }
-
-    // --- 3. 파일 지식 주입 요청 ---
-    async function uploadFile() {
-        const fileInput = document.getElementById('fileInput');
-        const fileStatus = document.getElementById('fileStatus');
-        if (fileInput.files.length === 0) { alert("업로드할 파일을 선택해 주세요."); return; }
-
-        const formData = new FormData();
-        formData.append("file", fileInput.files[0]);
-        fileStatus.innerText = "문서 분석 및 벡터화 진행 중...";
-
-        try {
-            const response = await fetch('/api/rag/ingest-file', {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.text();
-            fileStatus.innerText = result;
-            fileInput.value = '';
-        } catch (error) {
-            fileStatus.innerText = "파일 저장 실패: " + error;
-        }
-    }
-
-    // --- 4. 일반 RAG 질문 및 SSE 스트리밍 수신 ---
-    function sendQuery() {
-        const queryInput = document.getElementById('queryInput');
-        const query = queryInput.value;
-        if (!query.trim()) return;
-
-        const chatBox = document.getElementById('chatBox');
-
-        const userDiv = document.createElement('div');
-        userDiv.className = 'user-msg';
-        userDiv.innerText = query;
-        chatBox.appendChild(userDiv);
-        queryInput.value = '';
-
-        const wrapperDiv = document.createElement('div');
-        wrapperDiv.className = 'ai-msg-wrapper';
-
-        const aiDiv = document.createElement('div');
-        aiDiv.className = 'ai-msg';
-        aiDiv.innerText = '생각 중...';
-
-        wrapperDiv.appendChild(aiDiv);
-        chatBox.appendChild(wrapperDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        const eventSource = new EventSource(`/api/rag/chat?query=${encodeURIComponent(query)}`);
-        let isFirst = true;
-        let rawMarkdownBuffer = "";
-
-        eventSource.onmessage = function (event) {
-            if (isFirst) {
-                aiDiv.innerText = '';
-                isFirst = false;
-            }
-            let data = event.data.replaceAll('[SPACE]', ' ');
-            rawMarkdownBuffer += data;
-            aiDiv.innerHTML = marked.parse(rawMarkdownBuffer);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        };
-
-        eventSource.onerror = function (err) {
-            eventSource.close();
-            // 에러가 아니더라도 스트리밍이 성공적으로 끝나면 close 이벤트가 일어날 수 있으므로
-            // 정상 응답 버퍼가 쌓였다면 피드백 버튼을 붙여줍니다.
-            if(rawMarkdownBuffer.length > 0 && !wrapperDiv.querySelector('.feedback-buttons')) {
-                wrapperDiv.appendChild(createFeedbackElement(query, aiDiv));
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
-        };
-    }
-
-    // --- 5. 암벽화 스펙 데이터 인제스션 ---
-    async function ingestShoe() {
-        const brand = document.getElementById('brandInput').value;
-        const model = document.getElementById('modelInput').value;
-        const footShape = document.getElementById('footShapeInput').value;
-        const footShapeSpec = document.getElementById('footShapeSpecInput').value;
-        const wallSize = document.getElementById('wallSizeInput').value;
-        const padType = document.getElementById('padTypeInput').value;
-        const toeBoxSize = document.getElementById('toeBoxSizeInput').value;
-        const heelCupSize = document.getElementById('heelCupSizeInput').value;
-        const heelCupHardness = document.getElementById('heelCupHardnessInput').value;
-        const mainUses = document.getElementById('mainUsesInput').value;
-        const desc = document.getElementById('shoeDescInput').value;
-        const statusDiv = document.getElementById('shoeStatus');
-
-        if(!model.trim() || !desc.trim()) { alert('최소한 모델명과 특징 정보는 입력해야 합니다.'); return; }
-
-        statusDiv.innerText = "저장 중...";
-        try {
-            const response = await fetch('/api/rag/ingest-shoe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    brand: brand, model: model, footShape: footShape, footShapeSpec: footShapeSpec,
-                    wallSize: wallSize, padType: padType, toeBoxSize: toeBoxSize,
-                    heelCupSize: heelCupSize, heelCupHardness: heelCupHardness,
-                    mainUses: mainUses, description: desc
-                })
-            });
-            const result = await response.text();
-            statusDiv.innerText = result;
-
-            document.getElementById('modelInput').value = '';
-            document.getElementById('footShapeInput').value = '';
-            document.getElementById('footShapeSpecInput').value = '';
-            document.getElementById('wallSizeInput').value = '';
-            document.getElementById('padTypeInput').value = '';
-            document.getElementById('toeBoxSizeInput').value = '';
-            document.getElementById('heelCupSizeInput').value = '';
-            document.getElementById('heelCupHardnessInput').value = '';
-            document.getElementById('mainUsesInput').value = '';
-            document.getElementById('shoeDescInput').value = '';
-        } catch (error) {
-            statusDiv.innerText = "저장 실패: " + error;
-        }
-    }
-
-    // 모니터링 자원 타이머
-    let timeLeft = 5;
-    const timerElement = document.getElementById('refresh-timer');
-    if(timerElement) {
-        setInterval(() => {
-            timeLeft--;
-            if (timeLeft <= 0) { location.reload(); }
-            else { timerElement.innerText = timeLeft + "s"; }
-        }, 1000);
-    }
-</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/chat.js"></script>
 </body>
 </html>
