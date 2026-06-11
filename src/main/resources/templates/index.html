@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>암벽화 추천 및 Local RAG 시스템</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         body { background-color: #f8f9fa; position: relative; min-height: 100vh; padding-bottom: 60px; }
 
-        /* 채팅창 높이를 화면 환경에 맞춰 유연하게 조정 */
         .chat-box {
             height: 50vh;
             min-height: 350px;
@@ -22,7 +22,6 @@
             border-radius: 5px;
         }
 
-        /* 말풍선 가독성 확장 및 글자 깨짐 방지 */
         .user-msg {
             background: #e3f2fd;
             padding: 8px 12px;
@@ -35,27 +34,47 @@
             word-break: break-all;
         }
 
+        /* 피드백 버튼 정렬을 위해 래퍼 스타일 추가 */
+        .ai-msg-wrapper {
+            float: left;
+            clear: both;
+            max-width: 90%;
+            margin-bottom: 10px;
+        }
+
         .ai-msg {
             background: #f1f3f5;
             padding: 12px 15px;
             border-radius: 15px;
-            display: inline-block;
-            max-width: 90%;
-            float: left;
-            clear: both;
-            margin-bottom: 10px;
+            display: block;
             word-break: break-all;
         }
 
-        /* 마크다운 렌더링 여백 미세 조정 */
+        /* 피드백 버튼 디자인 */
+        .feedback-buttons {
+            margin-top: 5px;
+            padding-left: 5px;
+        }
+        .feedback-btn {
+            background: none;
+            border: none;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-right: 10px;
+            cursor: pointer;
+            padding: 2px 5px;
+            transition: color 0.2s;
+        }
+        .feedback-btn:hover { color: #212529; }
+        .feedback-btn.active-like { color: #0d6efd; font-weight: bold; }
+        .feedback-btn.active-dislike { color: #dc3545; font-weight: bold; }
+
         .ai-msg p:last-child { margin-bottom: 0; }
         .ai-msg ul, .ai-msg ol { padding-left: 20px; }
         .ai-msg table { width: 100%; overflow-x: auto; display: block; }
 
-        /* 이미지 프리뷰 스타일 추가 */
         .preview-img { max-width: 100%; height: auto; display: none; margin-bottom: 15px; }
 
-        /* 한 귀퉁이에 들어갈 미니 모니터링 텍스트 창 스타일 */
         .mini-monitor {
             position: fixed;
             bottom: 15px;
@@ -92,7 +111,6 @@
     </ul>
 
     <div class="tab-content" id="myTabContent">
-
         <div class="tab-pane fade show active" id="recommend" role="tabpanel" aria-labelledby="recommend-tab">
             <div class="row g-4">
                 <div class="col-12 col-lg-4">
@@ -108,7 +126,9 @@
                     <div class="card p-3 shadow-sm">
                         <h5 class="fw-bold fs-6">🤖 추천 결과</h5>
                         <div id="recommendChatBox" class="chat-box mb-3">
-                            <div class="ai-msg">이미지를 업로드하면 Vision 모델이 발을 분석하여 알맞은 암벽화를 추천합니다.</div>
+                            <div class="ai-msg-wrapper">
+                                <div class="ai-msg">이미지를 업로드하면 Vision 모델이 발을 분석하여 알맞은 암벽화를 추천합니다.</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -120,10 +140,10 @@
                 <h5 class="mb-3 fw-bold fs-6">👟 암벽화 스펙 데이터 주입</h5>
                 <input type="text" id="brandInput" class="form-control mb-2" placeholder="암벽화 브랜드 (예: 라 스포르티바)" />
                 <input type="text" id="modelInput" class="form-control mb-2" placeholder="모델명" />
-                <input type="text" id="footShapeInput" class="form-control mb-2" placeholder="족형(대칭, 비대칭)" />
+                <input type="text" id="footShapeInput" class="form-control mb-2" placeholder="족형(이집트형, 로마형, 그리스형)" />
+                <textarea id="footShapeSpecInput" class="form-control mb-3" rows="5" placeholder="족형 특이사항"></textarea>
                 <input type="text" id="wallSizeInput" class="form-control mb-2" placeholder="발 볼 사이즈 (예: 좁음, 중간, 넓음)" />
                 <input type="text" id="padTypeInput" class="form-control mb-2" placeholder="패드 타입 (예: 하드(hard), 미디엄(medium), 소프트(soft))" />
-                <input type="text" id="padClassInput" class="form-control mb-2" placeholder="패드 종류" />
                 <input type="text" id="toeBoxSizeInput" class="form-control mb-2" placeholder="토 박스 크기(예: 좁음, 중간, 넓음)" />
                 <input type="text" id="heelCupSizeInput" class="form-control mb-2" placeholder="힐컵 사이즈(예: 작음, 중간, 큼)" />
                 <input type="text" id="heelCupHardnessInput" class="form-control mb-2" placeholder="힐컴 경도(예: 하드(hard), 미디엄(medium), 소프트(soft))" />
@@ -154,7 +174,9 @@
                     <div class="card p-3 shadow-sm">
                         <h5 class="fw-bold fs-6">3. 임베딩 지식 기반 Q&A</h5>
                         <div id="chatBox" class="chat-box mb-3">
-                            <div class="ai-msg">안녕하세요! 주입된 지식을 바탕으로 답변해 드립니다. 질문을 입력해주세요.</div>
+                            <div class="ai-msg-wrapper">
+                                <div class="ai-msg">안녕하세요! 주입된 지식을 바탕으로 답변해 드립니다. 질문을 입력해주세요.</div>
+                            </div>
                         </div>
                         <div class="input-group">
                             <input type="text" id="queryInput" class="form-control" placeholder="질문을 입력하세요..." onkeypress="if(event.keyCode==13) sendQuery()">
@@ -164,7 +186,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -177,16 +198,13 @@
 </div>
 
 <script>
-    // --- 이미지 미리보기 로직 ---
     function previewImage(event) {
         const reader = new FileReader();
         const imageField = document.getElementById("imagePreview");
-
         if(event.target.files.length === 0) {
             imageField.style.display = 'none';
             return;
         }
-
         reader.onload = function() {
             if (reader.readyState === 2) {
                 imageField.src = reader.result;
@@ -196,18 +214,80 @@
         reader.readAsDataURL(event.target.files[0]);
     }
 
-    // --- 1. 발 이미지 업로드 및 스트리밍 추천 (Fetch Stream API 기반) ---
+    // --- 피드백 버튼 동적 템플릿 생성기 ---
+    function createFeedbackElement(questionText, aiMsgDiv) {
+        const feedbackDiv = document.createElement('div');
+        feedbackDiv.className = 'feedback-buttons';
+
+        feedbackDiv.innerHTML = `
+            <button class="feedback-btn like-btn" onclick="sendFeedback(this, 'like')"><i class="bi bi-hand-thumbs-up"></i> 좋아요</button>
+            <button class="feedback-btn dislike-btn" onclick="sendFeedback(this, 'dislike')"><i class="bi bi-hand-thumbs-down"></i> 싫어요</button>
+        `;
+
+        // 버튼 데이터 속성에 평가할 텍스트 정보를 바인딩
+        feedbackDiv.dataset.question = questionText;
+        feedbackDiv.dataset.answer = aiMsgDiv.innerText;
+
+        return feedbackDiv;
+    }
+
+    // --- 피드백 전송 함수 (Elasticsearch 임베딩 API 호출) ---
+    async function sendFeedback(buttonElement, type) {
+        const parent = buttonElement.parentElement;
+        const question = parent.dataset.question;
+        const answer = parent.dataset.answer;
+
+        // 버튼 UX 처리 (클릭 상태 활성화)
+        const likeBtn = parent.querySelector('.like-btn');
+        const dislikeBtn = parent.querySelector('.dislike-btn');
+
+        likeBtn.classList.remove('active-like');
+        dislikeBtn.classList.remove('active-dislike');
+
+        if(type === 'like') {
+            buttonElement.classList.add('active-like');
+        } else {
+            buttonElement.classList.add('active-dislike');
+        }
+
+        try {
+            const response = await fetch('/api/rag/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: question,
+                    answer: answer,
+                    score: type === 'like' ? 1 : -1
+                })
+            });
+            if(response.ok) {
+                console.log("피드백 반영 완료 및 Elasticsearch 임베딩 성공");
+            } else {
+                alert("피드백 저장 실패");
+            }
+        } catch (error) {
+            console.error("오류 발생:", error);
+        }
+    }
+
+    // --- 1. 발 이미지 업로드 및 스트리밍 추천 ---
     async function recommendShoe() {
         const fileInput = document.getElementById('footImageInput');
         if (fileInput.files.length === 0) { alert("이미지를 선택하세요."); return; }
 
         const chatBox = document.getElementById('recommendChatBox');
-        chatBox.innerHTML += `<div class="user-msg">사진을 보냈습니다. 제 발에 맞는 암벽화를 추천해주세요.</div>`;
+        const userPrompt = "사진을 보냈습니다. 제 발에 맞는 암벽화를 추천해주세요.";
+        chatBox.innerHTML += `<div class="user-msg">${userPrompt}</div>`;
+
+        const wrapperDiv = document.createElement('div');
+        wrapperDiv.className = 'ai-msg-wrapper';
 
         const aiDiv = document.createElement('div');
         aiDiv.className = 'ai-msg';
-        aiDiv.innerText = 'Vision 모델이 발 이미지를 분석하고 있습니다. 잠시만 기다려주세요... (약 10~30초 소요)';
-        chatBox.appendChild(aiDiv);
+        aiDiv.innerText = 'Vision 모델이 발 이미지를 분석하고 있습니다...';
+
+        wrapperDiv.appendChild(aiDiv);
+        chatBox.appendChild(wrapperDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
 
         const formData = new FormData();
@@ -225,27 +305,79 @@
             const decoder = new TextDecoder("utf-8");
             let isFirst = true;
             let rawMarkdownBuffer = "";
+            let streamBuffer = ""; // 네트워크 쪼개짐 방지 버퍼
 
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) break;
 
-                let chunkText = decoder.decode(value, { stream: true });
-                const lines = chunkText.split('\n');
+                streamBuffer += decoder.decode(value, { stream: true });
+
+                const lines = streamBuffer.split('\n');
+                streamBuffer = lines.pop(); // 미완성 라인은 다음으로 토스
+
+                let hasNewData = false;
 
                 for (let line of lines) {
-                    if (line.startsWith('data:')) {
-                        let data = line.replace('data:', '');
-                        data = data.replaceAll('[SPACE]', ' ');
+                    let trimmed = line.trim();
+                    if (!trimmed) continue;
 
-                        if (isFirst) { aiDiv.innerText = ''; isFirst = false; }
-                        rawMarkdownBuffer += data;
-                        aiDiv.innerHTML = marked.parse(rawMarkdownBuffer);
-                        chatBox.scrollTop = chatBox.scrollHeight;
+                    let data = line;
+                    if (trimmed.startsWith('data:')) {
+                        data = line.replace(/^data:\s*/, '');
                     }
+
+                    // 백엔드 치환 문자 원복
+                    data = data.replaceAll('[SPACE]', ' ');
+
+                    if (isFirst) {
+                        aiDiv.innerText = '';
+                        isFirst = false;
+                    }
+
+                    rawMarkdownBuffer += data; // 💡 여기서 바로 개행(\n)을 더하지 않고 원본 그대로 결합합니다.
+                    hasNewData = true;
+                }
+
+                if (hasNewData) {
+                    // 🔥 [핵심 추가] 가독성을 해치는 비정상적인 공백 및 표 깨짐 정제 로직
+                    let cleanedMarkdown = rawMarkdownBuffer
+                        // 1. 단어들 사이에 자잘하게 쪼개진 공백 제거 (한글/영문 글자 사이의 다중 공백을 하나로 축소)
+                        //    단, 마크다운 문법이나 의도된 줄바꿈이 깨지지 않도록 조정합니다.
+                        .replace(/([가-힣A-Za-z0-9])\s+([가-힣A-Za-z0-9])/g, '$1 $2')
+                        // 2. 마크다운 표(Table) 기호인 '|' 주변의 불필요한 공백 및 유령 개행 제거하여 표 구조 유지
+                        .replace(/\s*\|\s*/g, ' | ')
+                        // 3. 표 헤더 구분선인 '| : |' 형태가 찢어지는 현상 보정
+                        .replace(/\|\s*:\s*\|/g, '| : |');
+
+                    aiDiv.innerHTML = marked.parse(cleanedMarkdown);
+                    chatBox.scrollTop = chatBox.scrollHeight;
                 }
             }
-            fileInput.value = ''; // 완료 후 인풋 초기화
+
+// 루프 종료 후 잔여 버퍼 처리
+            if (streamBuffer.trim()) {
+                let data = streamBuffer;
+                if (streamBuffer.trim().startsWith('data:')) {
+                    data = streamBuffer.replace(/^data:\s*/, '');
+                }
+                data = data.replaceAll('[SPACE]', ' ');
+                rawMarkdownBuffer += data;
+            }
+
+// 💡 최종 출력 전 한 번 더 정제 후 반영
+            let finalCleaned = rawMarkdownBuffer
+                .replace(/([가-힣A-Za-z0-9])\s+([가-힣A-Za-z0-9])/g, '$1 $2')
+                .replace(/\s*\|\s*/g, ' | ')
+                .replace(/\|\s*:\s*\|/g, '| : |');
+
+            aiDiv.innerHTML = marked.parse(finalCleaned);
+
+            if (rawMarkdownBuffer.length > 0 && !wrapperDiv.querySelector('.feedback-buttons')) {
+                wrapperDiv.appendChild(createFeedbackElement(userPrompt, aiDiv));
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+            fileInput.value = '';
         } catch (error) {
             aiDiv.innerText = "분석 중 오류가 발생했습니다: " + error.message;
         }
@@ -275,7 +407,6 @@
     async function uploadFile() {
         const fileInput = document.getElementById('fileInput');
         const fileStatus = document.getElementById('fileStatus');
-
         if (fileInput.files.length === 0) { alert("업로드할 파일을 선택해 주세요."); return; }
 
         const formData = new FormData();
@@ -295,7 +426,7 @@
         }
     }
 
-    // --- 4. 일반 RAG 질문 및 SSE 스트리밍 수신 (EventSource 기반) ---
+    // --- 4. 일반 RAG 질문 및 SSE 스트리밍 수신 ---
     function sendQuery() {
         const queryInput = document.getElementById('queryInput');
         const query = queryInput.value;
@@ -309,10 +440,15 @@
         chatBox.appendChild(userDiv);
         queryInput.value = '';
 
+        const wrapperDiv = document.createElement('div');
+        wrapperDiv.className = 'ai-msg-wrapper';
+
         const aiDiv = document.createElement('div');
         aiDiv.className = 'ai-msg';
         aiDiv.innerText = '생각 중...';
-        chatBox.appendChild(aiDiv);
+
+        wrapperDiv.appendChild(aiDiv);
+        chatBox.appendChild(wrapperDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
 
         const eventSource = new EventSource(`/api/rag/chat?query=${encodeURIComponent(query)}`);
@@ -324,8 +460,7 @@
                 aiDiv.innerText = '';
                 isFirst = false;
             }
-            let data = event.data;
-            data = data.replaceAll('[SPACE]', ' ');
+            let data = event.data.replaceAll('[SPACE]', ' ');
             rawMarkdownBuffer += data;
             aiDiv.innerHTML = marked.parse(rawMarkdownBuffer);
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -333,6 +468,12 @@
 
         eventSource.onerror = function (err) {
             eventSource.close();
+            // 에러가 아니더라도 스트리밍이 성공적으로 끝나면 close 이벤트가 일어날 수 있으므로
+            // 정상 응답 버퍼가 쌓였다면 피드백 버튼을 붙여줍니다.
+            if(rawMarkdownBuffer.length > 0 && !wrapperDiv.querySelector('.feedback-buttons')) {
+                wrapperDiv.appendChild(createFeedbackElement(query, aiDiv));
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
         };
     }
 
@@ -341,9 +482,9 @@
         const brand = document.getElementById('brandInput').value;
         const model = document.getElementById('modelInput').value;
         const footShape = document.getElementById('footShapeInput').value;
+        const footShapeSpec = document.getElementById('footShapeSpecInput').value;
         const wallSize = document.getElementById('wallSizeInput').value;
         const padType = document.getElementById('padTypeInput').value;
-        const padClass = document.getElementById('padClassInput').value;
         const toeBoxSize = document.getElementById('toeBoxSizeInput').value;
         const heelCupSize = document.getElementById('heelCupSizeInput').value;
         const heelCupHardness = document.getElementById('heelCupHardnessInput').value;
@@ -359,28 +500,20 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    brand: brand,
-                    model: model,
-                    footShape: footShape,
-                    wallSize: wallSize,
-                    padType: padType,
-                    padClass: padClass,
-                    toeBoxSize: toeBoxSize,
-                    heelCupSize: heelCupSize,
-                    heelCupHardness: heelCupHardness,
-                    mainUses: mainUses,
-                    description: desc
+                    brand: brand, model: model, footShape: footShape, footShapeSpec: footShapeSpec,
+                    wallSize: wallSize, padType: padType, toeBoxSize: toeBoxSize,
+                    heelCupSize: heelCupSize, heelCupHardness: heelCupHardness,
+                    mainUses: mainUses, description: desc
                 })
             });
             const result = await response.text();
             statusDiv.innerText = result;
 
-            // document.getElementById('brandInput').value = '';
             document.getElementById('modelInput').value = '';
             document.getElementById('footShapeInput').value = '';
+            document.getElementById('footShapeSpecInput').value = '';
             document.getElementById('wallSizeInput').value = '';
             document.getElementById('padTypeInput').value = '';
-            document.getElementById('padClassInput').value = '';
             document.getElementById('toeBoxSizeInput').value = '';
             document.getElementById('heelCupSizeInput').value = '';
             document.getElementById('heelCupHardnessInput').value = '';
@@ -391,17 +524,14 @@
         }
     }
 
-    // 모니터링 자원 5초 갱신 타이머 통합
+    // 모니터링 자원 타이머
     let timeLeft = 5;
     const timerElement = document.getElementById('refresh-timer');
     if(timerElement) {
         setInterval(() => {
             timeLeft--;
-            if (timeLeft <= 0) {
-                location.reload();
-            } else {
-                timerElement.innerText = timeLeft + "s";
-            }
+            if (timeLeft <= 0) { location.reload(); }
+            else { timerElement.innerText = timeLeft + "s"; }
         }, 1000);
     }
 </script>

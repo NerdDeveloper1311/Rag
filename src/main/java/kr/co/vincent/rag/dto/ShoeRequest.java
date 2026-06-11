@@ -11,11 +11,11 @@ public class ShoeRequest {
 
 	private String footShape;
 
+	private String footShapeSpec;
+
 	private String wallSize;
 
 	private String padType;
-
-	private String padClass;
 
 	private String toeBoxSize;
 
