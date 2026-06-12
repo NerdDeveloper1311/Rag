@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - RAG 프로젝트</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			min-height: 100vh;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			padding: 20px;
+		}
+
+		.login-container {
+			background: white;
+			padding: 40px;
+			border-radius: 20px;
+			box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+			width: 100%;
+			max-width: 400px;
+		}
+
+		.login-header {
+			text-align: center;
+			margin-bottom: 30px;
+		}
+
+		.login-header h1 {
+			color: #333;
+			font-size: 28px;
+			margin-bottom: 10px;
+		}
+
+		.login-header p {
+			color: #666;
+			font-size: 14px;
+		}
+
+		.form-group {
+			margin-bottom: 20px;
+		}
+
+		.form-group label {
+			display: block;
+			color: #333;
+			font-weight: 500;
+			margin-bottom: 8px;
+			font-size: 14px;
+		}
+
+		.form-group input {
+			width: 100%;
+			padding: 12px 16px;
+			border: 2px solid #e0e0e0;
+			border-radius: 10px;
+			font-size: 14px;
+			transition: all 0.3s ease;
+			outline: none;
+		}
+
+		.form-group input:focus {
+			border-color: #667eea;
+			box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+		}
+
+		.form-group input::placeholder {
+			color: #999;
+		}
+
+		.btn-login {
+			width: 100%;
+			padding: 14px;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			border: none;
+			border-radius: 10px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			margin-top: 10px;
+		}
+
+		.btn-login:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+		}
+
+		.btn-login:active {
+			transform: translateY(0);
+		}
+
+		.links {
+			text-align: center;
+			margin-top: 20px;
+			font-size: 14px;
+		}
+
+		.links a {
+			color: #667eea;
+			text-decoration: none;
+			font-weight: 500;
+			transition: color 0.3s ease;
+		}
+
+		.links a:hover {
+			color: #764ba2;
+		}
+
+		.links a.register-link {
+			display: block;
+			margin-top: 10px;
+		}
+
+		.error-message {
+			background: #fee;
+			color: #c33;
+			padding: 12px;
+			border-radius: 8px;
+			margin-bottom: 20px;
+			font-size: 14px;
+			display: none;
+			border: 1px solid #fcc;
+		}
+
+		.success-message {
+			background: #efe;
+			color: #3c3;
+			padding: 12px;
+			border-radius: 8px;
+			margin-bottom: 20px;
+			font-size: 14px;
+			display: none;
+			border: 1px solid #efe;
+		}
+
+		.footer {
+			text-align: center;
+			margin-top: 30px;
+			font-size: 12px;
+			color: #999;
+		}
+
+		.footer a {
+			color: #667eea;
+			text-decoration: none;
+		}
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <div class="login-header">
+        <h1><i class="fas fa-shield-alt"></i> RAG 프로젝트</h1>
+        <p>안전한 로그인으로 시작하세요</p>
+    </div>
+
+    <div id="error-message" class="error-message"></div>
+    <div id="success-message" class="success-message"></div>
+
+    <form id="login-form">
+        <div class="form-group">
+            <label for="email">이메일 주소</label>
+            <input type="email" id="email" name="email" placeholder="example@vincent.co.kr" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" name="password" placeholder="비밀번호를 입력하세요" required>
+        </div>
+
+        <button type="submit" class="btn-login">
+            <i class="fas fa-sign-in-alt"></i> 로그인
+        </button>
+    </form>
+
+    <div class="links">
+        <a href="register.html" class="register-link">계정이 없으신가요? 회원가입</a>
+        <a href="#">비밀번호 찾기</a>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2024 RAG Project. All rights reserved.</p>
+        <p><a href="#">이용약관</a> | <a href="#">개인정보처리방침</a></p>
+    </div>
+</div>
+
+<script>
+	document.getElementById('login-form').addEventListener('submit', async (e) => {
+		e.preventDefault();
+
+		const email = document.getElementById('email').value;
+		const password = document.getElementById('password').value;
+		const errorMessage = document.getElementById('error-message');
+		const successMessage = document.getElementById('success-message');
+
+		try {
+			const response = await fetch('/api/auth/login', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ email, password })
+			});
+
+			const data = await response.json();
+
+			if (response.ok) {
+				successMessage.style.display = 'block';
+				successMessage.textContent = data.message;
+
+				// 3 초 후 자동 리디렉션
+				setTimeout(() => {
+					window.location.href = '/';
+				}, 3000);
+			} else {
+				errorMessage.style.display = 'block';
+				errorMessage.textContent = data.message;
+			}
+		} catch (error) {
+			errorMessage.style.display = 'block';
+			errorMessage.textContent = '서버 오류가 발생했습니다. 다시 시도해주세요.';
+		}
+	});
+</script>
+</body>
+</html>

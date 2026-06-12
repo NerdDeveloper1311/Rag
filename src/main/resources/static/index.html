@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG 프로젝트 - 홈</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .main-container {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    .main-header {
+      margin-bottom: 30px;
+    }
+
+    .main-header h1 {
+      color: #333;
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .main-header p {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .user-info {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+
+    .user-info h3 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .user-info p {
+      color: #666;
+      font-size: 14px;
+      margin: 5px 0;
+    }
+
+    .user-info .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+
+    .badge-admin {
+      background: #e7f3ff;
+      color: #0066cc;
+    }
+
+    .badge-user {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .nav-buttons {
+      display: grid;
+      gap: 15px;
+    }
+
+    .btn {
+      padding: 14px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-secondary {
+      background: #f8f9fa;
+      color: #333;
+      border: 2px solid #e0e0e0;
+    }
+
+    .btn-secondary:hover {
+      background: #e9ecef;
+      border-color: #dee2e6;
+    }
+
+    .footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .footer a {
+      color: #667eea;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+<div class="main-container">
+  <div class="main-header">
+    <h1><i class="fas fa-shield-alt"></i> RAG 프로젝트</h1>
+    <p>안전하고 편리한 AI 기반 족형 분석 서비스</p>
+  </div>
+
+  <div id="user-info" class="user-info" style="display: none;">
+    <h3><i class="fas fa-user"></i> 현재 로그인한 사용자</h3>
+    <p id="user-email"></p>
+    <span id="user-role" class="badge"></span>
+  </div>
+
+  <div class="nav-buttons">
+    <a href="login.html" class="btn btn-primary">
+      <i class="fas fa-sign-in-alt"></i> 로그인
+    </a>
+    <a href="register.html" class="btn btn-secondary">
+      <i class="fas fa-user-plus"></i> 회원가입
+    </a>
+  </div>
+
+  <div class="footer">
+    <p>&copy; 2024 RAG Project. All rights reserved.</p>
+    <p><a href="#">이용약관</a> | <a href="#">개인정보처리방침</a></p>
+  </div>
+</div>
+
+<script>
+  // 현재 로그인 상태 확인
+  fetch('/api/auth/login', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              document.getElementById('user-info').style.display = 'block';
+              document.getElementById('user-email').textContent = `이메일: ${data.email}`;
+              document.getElementById('user-role').textContent = data.role;
+              document.getElementById('user-role').className = `badge badge-${data.role.toLowerCase()}`;
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+</script>
+</body>
+</html>

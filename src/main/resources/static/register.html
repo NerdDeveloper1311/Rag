@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 - RAG 프로젝트</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			min-height: 100vh;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			padding: 20px;
+		}
+
+		.register-container {
+			background: white;
+			padding: 40px;
+			border-radius: 20px;
+			box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+			width: 100%;
+			max-width: 400px;
+		}
+
+		.register-header {
+			text-align: center;
+			margin-bottom: 30px;
+		}
+
+		.register-header h1 {
+			color: #333;
+			font-size: 28px;
+			margin-bottom: 10px;
+		}
+
+		.register-header p {
+			color: #666;
+			font-size: 14px;
+		}
+
+		.form-group {
+			margin-bottom: 20px;
+		}
+
+		.form-group label {
+			display: block;
+			color: #333;
+			font-weight: 500;
+			margin-bottom: 8px;
+			font-size: 14px;
+		}
+
+		.form-group input,
+		.form-group select {
+			width: 100%;
+			padding: 12px 16px;
+			border: 2px solid #e0e0e0;
+			border-radius: 10px;
+			font-size: 14px;
+			transition: all 0.3s ease;
+			outline: none;
+			background: white;
+		}
+
+		.form-group input:focus,
+		.form-group select:focus {
+			border-color: #667eea;
+			box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+		}
+
+		.form-group input::placeholder {
+			color: #999;
+		}
+
+		.btn-register {
+			width: 100%;
+			padding: 14px;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			border: none;
+			border-radius: 10px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			margin-top: 10px;
+		}
+
+		.btn-register:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+		}
+
+		.btn-register:active {
+			transform: translateY(0);
+		}
+
+		.links {
+			text-align: center;
+			margin-top: 20px;
+			font-size: 14px;
+		}
+
+		.links a {
+			color: #667eea;
+			text-decoration: none;
+			font-weight: 500;
+			transition: color 0.3s ease;
+		}
+
+		.links a:hover {
+			color: #764ba2;
+		}
+
+		.links a.login-link {
+			display: block;
+			margin-top: 10px;
+		}
+
+		.error-message {
+			background: #fee;
+			color: #c33;
+			padding: 12px;
+			border-radius: 8px;
+			margin-bottom: 20px;
+			font-size: 14px;
+			display: none;
+			border: 1px solid #fcc;
+		}
+
+		.success-message {
+			background: #efe;
+			color: #3c3;
+			padding: 12px;
+			border-radius: 8px;
+			margin-bottom: 20px;
+			font-size: 14px;
+			display: none;
+			border: 1px solid #efe;
+		}
+
+		.footer {
+			text-align: center;
+			margin-top: 30px;
+			font-size: 12px;
+			color: #999;
+		}
+
+		.footer a {
+			color: #667eea;
+			text-decoration: none;
+		}
+    </style>
+</head>
+<body>
+<div class="register-container">
+    <div class="register-header">
+        <h1><i class="fas fa-user-plus"></i> 회원가입</h1>
+        <p>새로운 계정을 만들어보세요</p>
+    </div>
+
+    <div id="error-message" class="error-message"></div>
+    <div id="success-message" class="success-message"></div>
+
+    <form id="register-form">
+        <div class="form-group">
+            <label for="email">이메일 주소</label>
+            <input type="email" id="email" name="email" placeholder="example@vincent.co.kr" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" name="password" placeholder="8 자 이상 입력하세요" required minlength="8">
+        </div>
+
+        <div class="form-group">
+            <label for="password-confirm">비밀번호 확인</label>
+            <input type="password" id="password-confirm" name="passwordConfirm" placeholder="비밀번호를 다시 입력하세요" required>
+        </div>
+
+        <div class="form-group">
+            <label for="role">권한</label>
+            <select id="role" name="role" required>
+                <option value="USER">일반 사용자</option>
+                <option value="ADMIN">관리자</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn-register">
+            <i class="fas fa-user-plus"></i> 회원가입
+        </button>
+    </form>
+
+    <div class="links">
+        <a href="login.html" class="login-link">이미 계정이 있으신가요? 로그인</a>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2024 RAG Project. All rights reserved.</p>
+        <p><a href="#">이용약관</a> | <a href="#">개인정보처리방침</a></p>
+    </div>
+</div>
+
+<script>
+	document.getElementById('register-form').addEventListener('submit', async (e) => {
+		e.preventDefault();
+
+		const email = document.getElementById('email').value;
+		const password = document.getElementById('password').value;
+		const passwordConfirm = document.getElementById('password-confirm').value;
+		const role = document.getElementById('role').value;
+		const errorMessage = document.getElementById('error-message');
+		const successMessage = document.getElementById('success-message');
+
+		// 비밀번호 확인
+		if (password !== passwordConfirm) {
+			errorMessage.style.display = 'block';
+			errorMessage.textContent = '비밀번호가 일치하지 않습니다.';
+			return;
+		}
+
+		try {
+			const response = await fetch('/api/auth/register', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ email, password, role })
+			});
+
+			const data = await response.json();
+
+			if (response.ok) {
+				successMessage.style.display = 'block';
+				successMessage.textContent = data.message;
+
+				// 3 초 후 로그인 페이지로 리디렉션
+				setTimeout(() => {
+					window.location.href = 'login.html';
+				}, 3000);
+			} else {
+				errorMessage.style.display = 'block';
+				errorMessage.textContent = data.message;
+			}
+		} catch (error) {
+			errorMessage.style.display = 'block';
+			errorMessage.textContent = '서버 오류가 발생했습니다. 다시 시도해주세요.';
+		}
+	});
+</script>
+</body>
+</html>
