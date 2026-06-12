@@ -41,6 +41,11 @@ public class RagApiController {
 			.thenReturn("암벽화 데이터가 성공적으로 임베딩되었습니다.");
 	}
 
+	@GetMapping( value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE )
+	public Flux<String> chat( @RequestParam( value = "query" ) String query ) {
+		return ragService.chatWithDocument( query );
+	}
+
 	@PostMapping(value = "/feedback")
 	public Mono<ResponseEntity<String>> ingestFeedback(@RequestBody FeedbackRequest request) {
 		return ingestDocumentService.ingestFeedbackDocument(request)

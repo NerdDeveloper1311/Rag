@@ -1,0 +1,17 @@
+### ES-RAG rag-vector-index search
+GET http://localhost:9200/rag-vector-index/_search
+Content-TYpe: application/json
+Authorization: Basic elastic 1q2w3e4r
+
+{
+    "size": 100,
+    "_source": [
+        "metadata.type",
+        "content"
+    ],
+    "query": {
+        "term": {
+            "metadata.type.keyword": "qna_evaluation"
+        }
+    }
+}
