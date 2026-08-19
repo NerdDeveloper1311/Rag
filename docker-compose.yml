@@ -5,9 +5,9 @@ services:
     restart: unless-stopped
     ports:
       - "11434:11434"
-    mem_limit: 32g
     environment:
       - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_CONTEXT_LENGTH=32768
     volumes:
       - /d/DockerVolume/ollama:/root/.ollama
     deploy:
@@ -20,40 +20,9 @@ services:
     networks:
       - spring-ai-net
 
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
-    restart: unless-stopped
-    ports:
-      - "3000:8080"
-    environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY=1q2w3e4r'
-    volumes:
-      - /d/DockerVolume/open-webui:/app/backend/data
-    depends_on:
-      - ollama
-    networks:
-      - spring-ai-net
-  
-  pgvector:
-    image: pgvector/pgvector:pg16
-    container_name: pgvector
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=vector_db
-      - POSTGRES_USER=vincent
-      - POSTGRES_PASSWORD=1q2w3e4r
-    volumes:
-      - /d/DockerVolume/pgvector:/var/lib/postgresql/data
-    networks:
-      - spring-ai-net
-
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
-    container_name: es-rag
+    container_name: es
     restart: unless-stopped
     ports:
       - "9200:9200"

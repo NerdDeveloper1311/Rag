@@ -1,4 +1,3 @@
-
 spring:
     application:
         name: rag
@@ -41,3 +40,5 @@ spring:
 logging:
     pattern:
         console: "%clr(%-5level){green} %clr(%logger.%M\\(\\)){cyan}: %msg%n"
+server:
+    port: 19090
